@@ -1,0 +1,34 @@
+import pandas as pd
+import numpy as np
+import geocoder
+print("Imported!")
+
+df = pd.read_csv('toronto.csv')
+df.head()
+
+print(df.shape)
+df.describe()
+
+
+def get_latilong(postal_code):
+    lati_long_coords = None
+    while(lati_long_coords is None):
+        g = geocoder.arcgis('{}, Toronto, Ontario'.format(postal_code))
+        lati_long_coords = g.latlng
+    return lati_long_coords
+    
+get_latilong('M4G')
+
+postal_codes = df['Postalcode']    
+coords = [ get_latilong(postal_code) for postal_code in postal_codes.tolist() ]
+
+df_coords = pd.DataFrame(coords, columns=['Latitude', 'Longitude'])
+df['Latitude'] = df_coords['Latitude']
+df['Longitude'] = df_coords['Longitude']
+
+
+df[df.Postalcode == 'M5G']
+
+df.head(15)
+
+df.to_csv('toronto_part2.csv',index=False)
