@@ -1,0 +1,13 @@
+
+# clean dataframe 
+toronto = toronto[toronto.Borough!='Not assigned']
+toronto = toronto[toronto.Borough!= 0]
+toronto.reset_index(drop = True, inplace = True)
+i = 0
+for i in range(0,toronto.shape[0]):
+    if toronto.iloc[i][2] == 'Not assigned':
+        toronto.iloc[i][2] = toronto.iloc[i][1]
+        i = i+1
+        
+df = toronto.groupby(['Postalcode','Borough'])['Neighborhood'].apply(', '.join).reset_index()
+df
