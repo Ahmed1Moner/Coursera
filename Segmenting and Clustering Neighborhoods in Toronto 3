@@ -55,11 +55,3 @@ for lat, lng, label in zip(toronto_data['Latitude'], toronto_data['Longitude'], 
     label = folium.Popup(label, parse_html=True)
     folium.CircleMarker([lat, lng], radius=5, popup=label, color='blue', fill=True, fill_color='#3186cc', fill_opacity=0.7,parse_html=False).add_to(map_toronto)  
 map_toronto
-
-CLIENT_ID = 'DPBYY4JUY3DU20ALPSUV4ONY2K1GOJJKJ1NIHBB32XEMOVYY' # Put Your Client Id
-CLIENT_SECRET = '1MV443TYEP4HUO0WDUW5NQ5W10L2Y4G05NWG11WIR3NUGC5B' # Put You Client Secret 
-VERSION = '20180604'
-LIMIT = 30
-print('Your credentails:')
-print('CLIENT_ID: Hidden')
-print('CLIENT_SECRET: Hidden')
