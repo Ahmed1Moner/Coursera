@@ -1,16 +1,130 @@
+Part 2
+A description of the data and how it will be used to solve the problem.
+Describe the data that you will be using to solve the problem or execute your idea. Remember that you will need to use the Foursquare location data to solve the problem or execute your idea. You can absolutely use other datasets in combination with the Foursquare location data. So make sure that you provide adequate explanation and discussion, with examples, of the data that you will be using, even if it is only Foursquare location data.
 
-Data Description:
-Data Link: https://en.wikipedia.org/wiki/List_of_postal_codes_of_Canada:_M
+This submission will eventually become your Data section in your final report. So I recommend that you push the report (having your Data section) to your Github repository and submit a link to it.
 
-Will use Scarborough dataset which we scrapped from wikipedia on Week 3. Dataset consisting of latitude and longitude, zip codes.
 
-Foursquare API Data:
-We will need data about different venues in different neighborhoods of that specific borough. In order to gain that information we will use "Foursquare" locational information. Foursquare is a location data provider with information about all manner of venues and events within an area of interest. Such information includes venue names, locations, menus and even photos. As such, the foursquare location platform will be used as the sole data source since all the stated required information can be obtained through the API.
+The data that will be used is Foursquare data for Rio de Janeiro city. It will focus on venues of restaurant type. The popularity will be an indicator for how good an area is for a restaurant.
 
-After finding the list of neighborhoods, we then connect to the Foursquare API to gather information about venues inside each and every neighborhood. For each neighborhood, we have chosen the radius to be 100 meter.
+Code:
 
-The data retrieved from Foursquare contained information of venues within a specified distance of the longitude and latitude of the postcodes. The information obtained per venue as follows:
+import numpy as np # library to handle data in a vectorized manner
 
-1. Neighborhood
-2. Neighborhood Latitude
-3. Neighborhood Longitude
+import pandas as pd # library for data analsysis
+pd.set_option('display.max_columns', None)
+pd.set_option('display.max_rows', None)
+
+import json # library to handle JSON files
+
+#!conda install -c conda-forge geopy --yes # uncomment this line if you haven't completed the Foursquare API lab
+from geopy.geocoders import Nominatim # convert an address into latitude and longitude values
+
+import requests # library to handle requests
+from pandas.io.json import json_normalize # tranform JSON file into a pandas dataframe
+
+# Matplotlib and associated plotting modules
+import matplotlib.cm as cm
+import matplotlib.colors as colors
+
+# import k-means from clustering stage
+from sklearn.cluster import KMeans
+
+#!conda install -c conda-forge folium=0.5.0 --yes # uncomment this line if you haven't completed the Foursquare API lab
+import folium # map rendering library
+
+print('Libraries imported.')
+
+
+address = 'Rio de Janeiro, Rio de Janeiro'
+
+geolocator = Nominatim(user_agent="rio_explorer")
+location = geolocator.geocode(address)
+latitude = location.latitude
+longitude = location.longitude
+print('The geograpical coordinate of Rio de Janeiro is {}, {}.'.format(latitude, longitude))
+
+
+# Set up Foursquare
+CLIENT_ID = 'XBVDVFI3BB3LBMSPWBVCYUDG0AGUZRQP1MFUXOS0SKACIAGK' # your Foursquare ID
+CLIENT_SECRET = 'HD34GAYDCO0GOUM1Z3NFCY4JH4FO0V5F4FMOLO4CEDSZO5AV' # your Foursquare Secret
+VERSION = '20180605' # Foursquare API version
+LIMIT = 100
+print('Your credentails:')
+print('CLIENT_ID: ' + CLIENT_ID)
+print('CLIENT_SECRET:' + CLIENT_SECRET)
+
+
+search_query = 'Restaurant'
+radius = 50000
+print(search_query + ' .... OK!')
+
+
+url = 'https://api.foursquare.com/v2/venues/search?client_id={}&client_secret={}&ll={},{}&v={}&query={}&radius={}&limit={}'.format(CLIENT_ID, CLIENT_SECRET, latitude, longitude, VERSION, search_query, radius, LIMIT)
+url
+
+
+results = requests.get(url).json()
+
+
+
+# assign relevant part of JSON to venues
+venues = results['response']['venues']
+
+# tranform venues into a dataframe
+dataframe = json_normalize(venues)
+dataframe.head()
+
+
+# keep only columns that include venue name, and anything that is associated with location
+filtered_columns = ['name', 'categories'] + [col for col in dataframe.columns if col.startswith('location.')] + ['id']
+dataframe_filtered = dataframe.loc[:, filtered_columns]
+
+# function that extracts the category of the venue
+def get_category_type(row):
+    try:
+        categories_list = row['categories']
+    except:
+        categories_list = row['venue.categories']
+        
+    if len(categories_list) == 0:
+        return None
+    else:
+        return categories_list[0]['name']
+
+# filter the category for each row
+dataframe_filtered['categories'] = dataframe_filtered.apply(get_category_type, axis=1)
+
+# clean column names by keeping only last term
+dataframe_filtered.columns = [column.split('.')[-1] for column in dataframe_filtered.columns]
+
+dataframe_filtered.head()
+
+
+venues_map = folium.Map(location=[latitude, longitude], zoom_start=13) # generate map centred around the Conrad Hotel
+
+# add a red circle marker to represent the Conrad Hotel
+folium.features.CircleMarker(
+    [latitude, longitude],
+    radius=10,
+    color='red',
+    popup='Conrad Hotel',
+    fill = True,
+    fill_color = 'red',
+    fill_opacity = 0.6
+).add_to(venues_map)
+
+# add the Italian restaurants as blue circle markers
+for lat, lng, label in zip(dataframe_filtered.lat, dataframe_filtered.lng, dataframe_filtered.categories):
+    folium.features.CircleMarker(
+        [lat, lng],
+        radius=5,
+        color='blue',
+        popup=label,
+        fill = True,
+        fill_color='blue',
+        fill_opacity=0.6
+    ).add_to(venues_map)
+
+# display map
+venues_map
